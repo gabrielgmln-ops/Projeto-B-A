@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.time.Instant;
 import java.util.UUID;
 
 public interface ChaveIdempotenciaRepository extends JpaRepository<ChaveIdempotencia, String> {
@@ -40,4 +41,15 @@ public interface ChaveIdempotenciaRepository extends JpaRepository<ChaveIdempote
                           @Param("transacaoId") UUID transacaoId,
                           @Param("status") int status,
                           @Param("resposta") String resposta);
+
+    /**
+     * Remove chaves antigas. Não fere o histórico: a transação e os lançamentos
+     * continuam intactos; só se perde a capacidade de reconhecer uma repetição
+     * daquela chave, que depois do prazo de validade já não é esperada.
+     *
+     * @return quantidade de chaves removidas.
+     */
+    @Modifying
+    @Query(value = "DELETE FROM chave_idempotencia WHERE criada_em < :limite", nativeQuery = true)
+    int removerCriadasAntesDe(@Param("limite") Instant limite);
 }

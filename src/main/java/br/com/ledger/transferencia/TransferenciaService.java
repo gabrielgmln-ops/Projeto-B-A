@@ -145,8 +145,18 @@ public class TransferenciaService {
         return TransferenciaResponse.de(transacao);
     }
 
+    /**
+     * IMPORTANTE (contenção): o lock existe para proteger a validação de saldo.
+     * A Tesouraria pode ficar negativa, então não há saldo dela a validar e
+     * travá-la só criaria uma fila única por onde passariam TODOS os depósitos
+     * do banco. Por isso ela é lida sem lock; os lançamentos dela são apenas
+     * INSERTs, que o PostgreSQL executa em paralelo sem conflito.
+     * As contas de cliente continuam travadas, na mesma ordem crescente de id.
+     */
     private Conta bloquear(UUID id) {
-        return contaRepository.buscarParaAtualizacao(id)
-                .orElseThrow(() -> new RecursoNaoEncontradoException("Conta nao encontrada: " + id));
+        var conta = Conta.TESOURARIA_ID.equals(id)
+                ? contaRepository.findById(id)
+                : contaRepository.buscarParaAtualizacao(id);
+        return conta.orElseThrow(() -> new RecursoNaoEncontradoException("Conta nao encontrada: " + id));
     }
 }

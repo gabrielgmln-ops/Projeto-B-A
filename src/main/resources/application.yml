@@ -34,6 +34,13 @@ spring:
         # Limite de itens por página: impede que alguém peça size=1000000 no extrato.
         max-page-size: 100
 
+ledger:
+  idempotencia:
+    # Por quanto tempo uma chave reconhece repetições (formato Duration: 24h, 30m...).
+    validade: ${IDEMPOTENCIA_VALIDADE:24h}
+    # Quando a limpeza roda (cron do Spring: seg min hora dia mês dia-da-semana). Padrão: a cada hora.
+    limpeza-cron: ${IDEMPOTENCIA_LIMPEZA_CRON:0 0 * * * *}
+
 server:
   # Plataformas de deploy (Render, Railway...) informam a porta pela variável PORT.
   port: ${PORT:8080}

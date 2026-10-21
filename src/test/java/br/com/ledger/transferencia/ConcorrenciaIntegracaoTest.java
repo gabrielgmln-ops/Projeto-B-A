@@ -5,6 +5,8 @@ import br.com.ledger.IntegracaoBase;
 import br.com.ledger.comum.SaldoInsuficienteException;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
@@ -36,6 +38,12 @@ class ConcorrenciaIntegracaoTest extends IntegracaoBase {
 
     @Autowired
     private TransferenciaService transferenciaService;
+
+    @Autowired
+    private TransactionTemplate transactionTemplate;
+
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
 
     @Test
     void milTransferenciasSimultaneasPreservamASomaDosSaldos() throws Exception {
@@ -116,6 +124,69 @@ class ConcorrenciaIntegracaoTest extends IntegracaoBase {
         assertThat(sucessos.get()).isEqualTo(100);
         assertThat(saldo(origem)).isEqualByComparingTo("0");
         assertThat(saldo(destino)).isEqualByComparingTo("100.00");
+    }
+
+    /**
+     * Prova de que a Tesouraria não é mais um gargalo: outra transação segura um
+     * lock na linha da Tesouraria e, mesmo assim, um depósito termina na hora.
+     *
+     * Por que FOR NO KEY UPDATE e não FOR UPDATE? Ao inserir um lançamento, a FK
+     * para conta faz o PostgreSQL pegar sozinho um lock leve (FOR KEY SHARE) na
+     * conta referenciada. FOR UPDATE bloquearia até esse lock leve; FOR NO KEY
+     * UPDATE não. Mas FOR NO KEY UPDATE conflita com o FOR UPDATE que a versão
+     * antiga do código pegava na Tesouraria: com a versão antiga, o depósito
+     * ficaria esperando e o get(5s) estouraria com TimeoutException.
+     */
+    @Test
+    void depositoNaoEsperaPeloLockDaTesouraria() throws Exception {
+        UUID conta = criarConta("Deposito sem fila");
+        CountDownLatch lockAdquirido = new CountDownLatch(1);
+        CountDownLatch liberar = new CountDownLatch(1);
+        ExecutorService pool = Executors.newFixedThreadPool(2);
+        try {
+            Future<?> bloqueador = pool.submit(() -> transactionTemplate.executeWithoutResult(status -> {
+                jdbcTemplate.queryForObject("SELECT id FROM conta WHERE id = ? FOR NO KEY UPDATE",
+                        UUID.class, br.com.ledger.conta.Conta.TESOURARIA_ID);
+                lockAdquirido.countDown();
+                try {
+                    liberar.await(30, TimeUnit.SECONDS);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                }
+            }));
+            assertThat(lockAdquirido.await(10, TimeUnit.SECONDS)).isTrue();
+
+            Future<ResultadoOperacao> deposito = pool.submit(() -> transferenciaService.depositar(
+                    UUID.randomUUID().toString(), new DepositoRequest(conta, new BigDecimal("7.00"), "sem fila")));
+
+            assertThat(deposito.get(5, TimeUnit.SECONDS).repetida()).isFalse();
+            assertThat(saldo(conta)).isEqualByComparingTo("7.00");
+
+            liberar.countDown();
+            bloqueador.get(10, TimeUnit.SECONDS);
+        } finally {
+            liberar.countDown();
+            pool.shutdownNow();
+        }
+    }
+
+    /** Muitos depósitos simultâneos (todos usam a Tesouraria) mantêm a contabilidade fechada. */
+    @Test
+    void depositosSimultaneosMantemASomaZero() throws Exception {
+        UUID conta = criarConta("Muitos depositos");
+        List<Callable<Void>> tarefas = new ArrayList<>();
+        for (int i = 0; i < 300; i++) {
+            tarefas.add(() -> {
+                transferenciaService.depositar(UUID.randomUUID().toString(),
+                        new DepositoRequest(conta, new BigDecimal("1.00"), "lote"));
+                return null;
+            });
+        }
+
+        executarSimultaneamente(tarefas);
+
+        assertThat(saldo(conta)).isEqualByComparingTo("300.00");
+        assertThat(lancamentoRepository.somarTodosOsLancamentos()).isEqualByComparingTo(BigDecimal.ZERO);
     }
 
     /** Dispara todas as tarefas juntas e propaga qualquer erro inesperado (ex.: deadlock). */
