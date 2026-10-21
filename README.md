@@ -4,6 +4,9 @@ API REST que funciona como o livro-razão de um banco digital: contas, transfer�
 
 > Projeto de estudo. Todos os dados são sintéticos.
 
+**Demo ao vivo:** https://ledger-api-sk0d.onrender.com/swagger-ui.html
+(plano gratuito do Render: depois de ~15 min parado, o primeiro acesso leva cerca de 50 s para acordar)
+
 **Stack:** Java 21 · Spring Boot 3.5 · PostgreSQL 16 · Spring Data JPA · Flyway · Bean Validation · springdoc-openapi · JUnit 5 · Testcontainers · JaCoCo · Docker Compose · GitHub Actions
 
 ## Arquitetura
@@ -125,6 +128,8 @@ curl.exe -X POST http://localhost:8081/api/v1/contas -H "Content-Type: applicati
 1. Suba o repositório no GitHub.
 2. No Render: **New → Blueprint** e selecione o repositório. O `render.yaml` cria o PostgreSQL e o serviço web a partir do `Dockerfile`.
 3. Acesse `https://<seu-servico>.onrender.com/swagger-ui.html`.
+
+Instância publicada: https://ledger-api-sk0d.onrender.com. O banco do plano gratuito expira após 30 dias e precisa ser recriado.
 
 ## Limitações conhecidas
 
