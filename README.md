@@ -55,6 +55,8 @@ sequenceDiagram
     end
 ```
 
+Conceitos usados (ACID, idempotência, lock, partidas dobradas...): [docs/GLOSSARIO.md](docs/GLOSSARIO.md).
+
 ## Decisões principais
 
 | Tema | Decisão | Por quê |
