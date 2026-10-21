@@ -31,6 +31,11 @@
         <java.version>21</java.version>
         <!-- springdoc não faz parte do BOM do Spring Boot, então fixamos a versão aqui. -->
         <springdoc.version>2.8.13</springdoc.version>
+        <!--
+          Sobrescreve a versão do BOM (1.21.3): o Docker Engine 29 recusa a API antiga
+          que a 1.21.3 usa ("Could not find a valid Docker environment", status 400).
+        -->
+        <testcontainers.version>1.21.4</testcontainers.version>
     </properties>
 
     <dependencies>
