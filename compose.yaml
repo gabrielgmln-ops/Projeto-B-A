@@ -1,0 +1,24 @@
+# Caminho: compose.yaml
+# Sobe o PostgreSQL local. As credenciais vêm do arquivo .env (mesmo usado pela aplicação).
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: ledger-postgres
+    environment:
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    volumes:
+      # Volume nomeado: os dados sobrevivem a "docker compose down" (só somem com "down -v").
+      - ledger-data:/var/lib/postgresql/data
+    healthcheck:
+      # Permite saber quando o banco está realmente pronto para conexões, não só "iniciado".
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  ledger-data:

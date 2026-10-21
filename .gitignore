@@ -1,0 +1,16 @@
+# Caminho: .gitignore
+
+# Build do Maven
+target/
+!.mvn/wrapper/maven-wrapper.jar
+
+# Segredos locais. IMPORTANTE: nunca versionar.
+.env
+
+# IntelliJ
+.idea/
+*.iml
+
+# Sistema operacional
+.DS_Store
+Thumbs.db

@@ -1,0 +1,184 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Caminho: pom.xml -->
+<!--
+  O pom.xml é o "requirements.txt + setup.py" do mundo Java (Maven).
+  Ele declara dependências, versão do Java e plugins de build.
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <!--
+      Herdar do spring-boot-starter-parent nos dá versões testadas em conjunto
+      de todas as bibliotecas do ecossistema (BOM). Por isso a maioria das
+      dependências abaixo NÃO declara versão: evita conflitos de compatibilidade.
+    -->
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>3.5.7</version>
+        <relativePath/>
+    </parent>
+
+    <groupId>br.com.ledger</groupId>
+    <artifactId>ledger-api</artifactId>
+    <version>0.0.1-SNAPSHOT</version>
+    <name>ledger-api</name>
+    <description>Núcleo bancário com contabilidade de partidas dobradas</description>
+
+    <properties>
+        <java.version>21</java.version>
+        <!-- springdoc não faz parte do BOM do Spring Boot, então fixamos a versão aqui. -->
+        <springdoc.version>2.8.13</springdoc.version>
+    </properties>
+
+    <dependencies>
+        <!-- API REST (Spring MVC + Tomcat embutido + Jackson para JSON). -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+
+        <!-- Persistência: JPA/Hibernate + Spring Data (repositories). -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-jpa</artifactId>
+        </dependency>
+
+        <!-- Bean Validation (@NotNull, @Positive...) para validar a entrada da API. -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-validation</artifactId>
+        </dependency>
+
+        <!-- Actuator: endpoints operacionais padrão (/actuator/health), usados por orquestradores. -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-actuator</artifactId>
+        </dependency>
+
+        <!--
+          Flyway: versiona o schema do banco com scripts SQL numerados (V1__, V2__...).
+          Em banco, o schema NUNCA deve ser gerado "automaticamente" pelo Hibernate:
+          precisamos de histórico auditável de cada mudança estrutural.
+        -->
+        <dependency>
+            <groupId>org.flywaydb</groupId>
+            <artifactId>flyway-core</artifactId>
+        </dependency>
+        <!-- A partir do Flyway 10, o suporte a cada banco vem em um módulo separado. -->
+        <dependency>
+            <groupId>org.flywaydb</groupId>
+            <artifactId>flyway-database-postgresql</artifactId>
+        </dependency>
+
+        <!-- Driver JDBC do PostgreSQL; "runtime" porque o código nunca o importa diretamente. -->
+        <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+
+        <!-- Swagger UI em /swagger-ui.html, gerado a partir dos controllers. -->
+        <dependency>
+            <groupId>org.springdoc</groupId>
+            <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+            <version>${springdoc.version}</version>
+        </dependency>
+
+        <!-- ===================== TESTES ===================== -->
+
+        <!-- JUnit 5 + Mockito + AssertJ + MockMvc. -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <!--
+          Testcontainers: sobe um PostgreSQL REAL em Docker durante os testes.
+          Preferimos isso a um banco em memória (H2) porque locks, isolamento e
+          tipos numéricos se comportam de forma diferente; e é justamente isso
+          que vamos testar na Etapa 4.
+        -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-testcontainers</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>postgresql</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <!-- Empacota a aplicação num único .jar executável (java -jar). -->
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+            </plugin>
+
+            <!--
+              JaCoCo mede a cobertura dos testes. "mvn verify" gera o relatório em
+              target/site/jacoco/index.html e FALHA o build se a cobertura de linhas
+              ficar abaixo de 80%, assim o CI barra código sem teste.
+            -->
+            <plugin>
+                <groupId>org.jacoco</groupId>
+                <artifactId>jacoco-maven-plugin</artifactId>
+                <version>0.8.13</version>
+                <configuration>
+                    <excludes>
+                        <!-- Classe main só chama o Spring; não há lógica para testar. -->
+                        <exclude>br/com/ledger/LedgerApiApplication.class</exclude>
+                    </excludes>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>preparar-agente</id>
+                        <goals>
+                            <goal>prepare-agent</goal>
+                        </goals>
+                    </execution>
+                    <execution>
+                        <id>relatorio</id>
+                        <phase>verify</phase>
+                        <goals>
+                            <goal>report</goal>
+                        </goals>
+                    </execution>
+                    <execution>
+                        <id>verificar-cobertura</id>
+                        <phase>verify</phase>
+                        <goals>
+                            <goal>check</goal>
+                        </goals>
+                        <configuration>
+                            <rules>
+                                <rule>
+                                    <element>BUNDLE</element>
+                                    <limits>
+                                        <limit>
+                                            <counter>LINE</counter>
+                                            <value>COVEREDRATIO</value>
+                                            <minimum>0.80</minimum>
+                                        </limit>
+                                    </limits>
+                                </rule>
+                            </rules>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+</project>

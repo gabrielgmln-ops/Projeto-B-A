@@ -1,0 +1,26 @@
+# Caminho: render.yaml
+# Blueprint do Render (plano gratuito): cria o PostgreSQL e o serviço web a partir
+# do Dockerfile, ligando as variáveis de ambiente automaticamente. Nenhuma senha aqui.
+databases:
+  - name: ledger-db
+    plan: free
+    databaseName: ledger
+    user: ledger_app
+
+services:
+  - type: web
+    name: ledger-api
+    runtime: docker
+    plan: free
+    healthCheckPath: /actuator/health
+    envVars:
+      - key: DB_HOST
+        fromDatabase: { name: ledger-db, property: host }
+      - key: DB_PORT
+        fromDatabase: { name: ledger-db, property: port }
+      - key: DB_NAME
+        fromDatabase: { name: ledger-db, property: database }
+      - key: DB_USER
+        fromDatabase: { name: ledger-db, property: user }
+      - key: DB_PASSWORD
+        fromDatabase: { name: ledger-db, property: password }
