@@ -49,6 +49,9 @@ ledger:
       cliente2:   # opcional
         username: ${SEED_CLIENTE2_USERNAME:}
         senha: ${SEED_CLIENTE2_SENHA:}
+      gateway:    # opcional: conta de serviço do Gateway de Segurança (papel CLIENTE)
+        username: ${SEED_GATEWAY_USERNAME:}
+        senha: ${SEED_GATEWAY_SENHA:}
     # Defesa contra força bruta no login (bloqueio progressivo por usuário).
     login:
       max-tentativas: ${LOGIN_MAX_TENTATIVAS:5}

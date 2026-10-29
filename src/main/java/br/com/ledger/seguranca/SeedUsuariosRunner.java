@@ -50,6 +50,14 @@ public class SeedUsuariosRunner implements CommandLineRunner {
     @Value("${ledger.seguranca.seed.cliente2.senha:}")
     private String cliente2Senha;
 
+    // Conta de serviço do Gateway de Segurança, opcional. É com ela que o gateway
+    // se autentica na Ledger (ele apaga o Authorization do cliente e injeta esta).
+    // Papel CLIENTE de propósito: privilégio mínimo, sem acesso à auditoria.
+    @Value("${ledger.seguranca.seed.gateway.username:}")
+    private String gatewayUsername;
+    @Value("${ledger.seguranca.seed.gateway.senha:}")
+    private String gatewaySenha;
+
     public SeedUsuariosRunner(UsuarioRepository usuarioRepository, PasswordEncoder passwordEncoder) {
         this.usuarioRepository = usuarioRepository;
         this.passwordEncoder = passwordEncoder;
@@ -62,6 +70,9 @@ public class SeedUsuariosRunner implements CommandLineRunner {
         criarSeNaoExistir(clienteUsername, clienteSenha, Papel.CLIENTE);
         if (StringUtils.hasText(cliente2Username)) { // opcional: sem aviso quando ausente
             criarSeNaoExistir(cliente2Username, cliente2Senha, Papel.CLIENTE);
+        }
+        if (StringUtils.hasText(gatewayUsername)) { // opcional: sem aviso quando ausente
+            criarSeNaoExistir(gatewayUsername, gatewaySenha, Papel.CLIENTE);
         }
     }
 
