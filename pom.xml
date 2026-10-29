@@ -64,6 +64,16 @@
         </dependency>
 
         <!--
+          Spring Security: autenticação e autorização. Ao entrar no classpath, já
+          tranca TODAS as rotas por padrão (secure by default); quem define o que é
+          público é a nossa SegurancaConfig. Traz também o BCrypt para hash de senha.
+        -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-security</artifactId>
+        </dependency>
+
+        <!--
           Flyway: versiona o schema do banco com scripts SQL numerados (V1__, V2__...).
           Em banco, o schema NUNCA deve ser gerado "automaticamente" pelo Hibernate:
           precisamos de histórico auditável de cada mudança estrutural.
@@ -98,6 +108,17 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <!--
+          spring-security-test: utilidades para testar com segurança ligada
+          (post-processors user(...), httpBasic(...), anonymous()). Essencial para
+          o arreio de autenticação do harness e para os testes das Etapas 1 a 5.
+        -->
+        <dependency>
+            <groupId>org.springframework.security</groupId>
+            <artifactId>spring-security-test</artifactId>
             <scope>test</scope>
         </dependency>
 

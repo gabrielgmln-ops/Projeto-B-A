@@ -42,6 +42,11 @@ public class Conta {
     @Column(name = "criada_em", nullable = false)
     private Instant criadaEm;
 
+    // Dono da conta (FK para usuario). Nulo para contas internas, como a Tesouraria,
+    // que não pertencem a nenhum cliente. É a base da autorização por dono (anti-IDOR).
+    @Column(name = "usuario_id")
+    private UUID usuarioId;
+
     /** Construtor exigido pelo JPA; protected para o código de negócio não usá-lo. */
     protected Conta() {
     }
@@ -54,6 +59,11 @@ public class Conta {
 
     public boolean permiteSaldoNegativo() {
         return tipo == TipoConta.INTERNA;
+    }
+
+    /** Define o dono (cliente) da conta. Usado na criação. */
+    public void definirDono(UUID usuarioId) {
+        this.usuarioId = usuarioId;
     }
 
     public UUID getId() {
@@ -70,5 +80,9 @@ public class Conta {
 
     public Instant getCriadaEm() {
         return criadaEm;
+    }
+
+    public UUID getUsuarioId() {
+        return usuarioId;
     }
 }

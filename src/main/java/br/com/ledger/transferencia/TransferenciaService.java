@@ -12,6 +12,7 @@ import br.com.ledger.idempotencia.IdempotenciaService;
 import br.com.ledger.lancamento.Lancamento;
 import br.com.ledger.lancamento.LancamentoRepository;
 import br.com.ledger.lancamento.TipoLancamento;
+import br.com.ledger.seguranca.ControleAcesso;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -43,17 +44,20 @@ public class TransferenciaService {
     private final LancamentoRepository lancamentoRepository;
     private final IdempotenciaService idempotenciaService;
     private final AuditoriaService auditoriaService;
+    private final ControleAcesso controleAcesso;
 
     public TransferenciaService(ContaRepository contaRepository,
                                 TransacaoRepository transacaoRepository,
                                 LancamentoRepository lancamentoRepository,
                                 IdempotenciaService idempotenciaService,
-                                AuditoriaService auditoriaService) {
+                                AuditoriaService auditoriaService,
+                                ControleAcesso controleAcesso) {
         this.contaRepository = contaRepository;
         this.transacaoRepository = transacaoRepository;
         this.lancamentoRepository = lancamentoRepository;
         this.idempotenciaService = idempotenciaService;
         this.auditoriaService = auditoriaService;
+        this.controleAcesso = controleAcesso;
     }
 
     /**
@@ -76,9 +80,17 @@ public class TransferenciaService {
 
     @Transactional(readOnly = true)
     public TransferenciaResponse buscar(UUID id) {
-        return transacaoRepository.findById(id)
-                .map(TransferenciaResponse::de)
-                .orElseThrow(() -> new RecursoNaoEncontradoException("Transacao nao encontrada: " + id));
+        Transacao transacao = transacaoRepository.findById(id)
+                .orElseThrow(() -> new RecursoNaoEncontradoException("Transacao nao encontrada"));
+        // Visível apenas para quem é dono da origem ou do destino (senão, 404).
+        controleAcesso.exigirVisibilidadeTransacao(donoDaConta(transacao.getContaOrigemId()),
+                donoDaConta(transacao.getContaDestinoId()));
+        return TransferenciaResponse.de(transacao);
+    }
+
+    /** Dono de uma conta pelo id, ou null se a conta for interna/sem dono. */
+    private UUID donoDaConta(UUID contaId) {
+        return contaRepository.findById(contaId).map(Conta::getUsuarioId).orElse(null);
     }
 
     private ResultadoOperacao executarIdempotente(String chave, TipoTransacao tipo, UUID origemId,
@@ -113,6 +125,16 @@ public class TransferenciaService {
         Conta segunda = bloquear(segundoId);
         Conta origem = primeira.getId().equals(origemId) ? primeira : segunda;
         Conta destino = origem == primeira ? segunda : primeira;
+
+        // Autorização por dono (anti-IDOR), feita no servidor após travar as contas:
+        // - TRANSFERENCIA: o dinheiro sai da ORIGEM, então o usuário tem de ser dono dela.
+        // - DEPOSITO: o dinheiro entra no DESTINO (a origem é a Tesouraria interna),
+        //   então o usuário tem de ser dono do destino.
+        if (tipo == TipoTransacao.TRANSFERENCIA) {
+            controleAcesso.exigirPosse(origem.getUsuarioId());
+        } else {
+            controleAcesso.exigirPosse(destino.getUsuarioId());
+        }
 
         if (tipo == TipoTransacao.TRANSFERENCIA
                 && (origem.getTipo() != TipoConta.CLIENTE || destino.getTipo() != TipoConta.CLIENTE)) {

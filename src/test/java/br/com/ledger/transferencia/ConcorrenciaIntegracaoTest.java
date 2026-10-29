@@ -142,7 +142,7 @@ class ConcorrenciaIntegracaoTest extends IntegracaoBase {
         UUID conta = criarConta("Deposito sem fila");
         CountDownLatch lockAdquirido = new CountDownLatch(1);
         CountDownLatch liberar = new CountDownLatch(1);
-        ExecutorService pool = Executors.newFixedThreadPool(2);
+        ExecutorService pool = poolSeguro(2);
         try {
             Future<?> bloqueador = pool.submit(() -> transactionTemplate.executeWithoutResult(status -> {
                 jdbcTemplate.queryForObject("SELECT id FROM conta WHERE id = ? FOR NO KEY UPDATE",
@@ -191,7 +191,7 @@ class ConcorrenciaIntegracaoTest extends IntegracaoBase {
 
     /** Dispara todas as tarefas juntas e propaga qualquer erro inesperado (ex.: deadlock). */
     private void executarSimultaneamente(List<Callable<Void>> tarefas) throws Exception {
-        ExecutorService pool = Executors.newFixedThreadPool(THREADS);
+        ExecutorService pool = poolSeguro(THREADS);
         CountDownLatch largada = new CountDownLatch(1);
         List<Future<Void>> futuros = new ArrayList<>();
         for (Callable<Void> tarefa : tarefas) {

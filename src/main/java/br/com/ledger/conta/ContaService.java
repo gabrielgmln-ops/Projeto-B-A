@@ -6,6 +6,7 @@ import br.com.ledger.comum.PaginaResponse;
 import br.com.ledger.comum.RecursoNaoEncontradoException;
 import br.com.ledger.lancamento.LancamentoRepository;
 import br.com.ledger.lancamento.LancamentoResponse;
+import br.com.ledger.seguranca.ControleAcesso;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,18 +21,25 @@ public class ContaService {
     private final ContaRepository contaRepository;
     private final LancamentoRepository lancamentoRepository;
     private final AuditoriaService auditoriaService;
+    private final ControleAcesso controleAcesso;
 
     public ContaService(ContaRepository contaRepository,
                         LancamentoRepository lancamentoRepository,
-                        AuditoriaService auditoriaService) {
+                        AuditoriaService auditoriaService,
+                        ControleAcesso controleAcesso) {
         this.contaRepository = contaRepository;
         this.lancamentoRepository = lancamentoRepository;
         this.auditoriaService = auditoriaService;
+        this.controleAcesso = controleAcesso;
     }
 
     @Transactional
     public ContaResponse criar(CriarContaRequest request) {
-        Conta conta = contaRepository.save(new Conta(request.titular().trim(), TipoConta.CLIENTE));
+        Conta conta = new Conta(request.titular().trim(), TipoConta.CLIENTE);
+        // A conta nasce pertencendo ao usuário autenticado que a criou. É isso que
+        // dá sentido à verificação de dono nas leituras e operações seguintes.
+        conta.definirDono(controleAcesso.idDoUsuarioAtual());
+        conta = contaRepository.save(conta);
         auditoriaService.registrar("CONTA_CRIADA", "Conta", conta.getId().toString(),
                 Map.of("titular", conta.getTitular(), "tipo", conta.getTipo()));
         // Conta nova não tem lançamentos: saldo é zero por definição.
@@ -41,12 +49,15 @@ public class ContaService {
     @Transactional(readOnly = true)
     public ContaResponse buscar(UUID id) {
         Conta conta = buscarEntidade(id);
+        // Autorização por dono: um cliente só vê a própria conta (senão, 404).
+        controleAcesso.exigirVisibilidade(conta.getUsuarioId());
         return ContaResponse.de(conta, lancamentoRepository.calcularSaldo(id));
     }
 
     @Transactional(readOnly = true)
     public PaginaResponse<LancamentoResponse> extrato(UUID contaId, Pageable pageable) {
-        buscarEntidade(contaId);
+        Conta conta = buscarEntidade(contaId);
+        controleAcesso.exigirVisibilidade(conta.getUsuarioId());
         return PaginaResponse.de(lancamentoRepository
                 .findByContaIdOrderByIdDesc(contaId, pageable)
                 .map(LancamentoResponse::de));

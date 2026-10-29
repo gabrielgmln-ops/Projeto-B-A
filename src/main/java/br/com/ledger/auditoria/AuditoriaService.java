@@ -2,6 +2,7 @@
 package br.com.ledger.auditoria;
 
 import br.com.ledger.comum.PaginaResponse;
+import br.com.ledger.seguranca.ControleAcesso;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.data.domain.Pageable;
@@ -16,10 +17,13 @@ public class AuditoriaService {
 
     private final EventoAuditoriaRepository repository;
     private final ObjectMapper objectMapper;
+    private final ControleAcesso controleAcesso;
 
-    public AuditoriaService(EventoAuditoriaRepository repository, ObjectMapper objectMapper) {
+    public AuditoriaService(EventoAuditoriaRepository repository, ObjectMapper objectMapper,
+                            ControleAcesso controleAcesso) {
         this.repository = repository;
         this.objectMapper = objectMapper;
+        this.controleAcesso = controleAcesso;
     }
 
     /**
@@ -36,6 +40,8 @@ public class AuditoriaService {
 
     @Transactional(readOnly = true)
     public PaginaResponse<EventoAuditoriaResponse> listar(String entidadeId, Pageable pageable) {
+        // A trilha de auditoria é interna do banco: só OPERADOR pode consultá-la.
+        controleAcesso.exigirOperador();
         var pagina = (entidadeId == null || entidadeId.isBlank())
                 ? repository.findAllByOrderByIdDesc(pageable)
                 : repository.findByEntidadeIdOrderByIdDesc(entidadeId, pageable);

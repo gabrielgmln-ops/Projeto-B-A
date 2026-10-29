@@ -105,7 +105,7 @@ class IdempotenciaIntegracaoTest extends IntegracaoBase {
         DepositoRequest request = new DepositoRequest(conta, new BigDecimal("25.00"), "simultaneo");
 
         int threads = 20;
-        ExecutorService pool = Executors.newFixedThreadPool(threads);
+        ExecutorService pool = poolSeguro(threads);
         CountDownLatch largada = new CountDownLatch(1);
         List<Future<ResultadoOperacao>> futuros = new ArrayList<>();
         for (int i = 0; i < threads; i++) {

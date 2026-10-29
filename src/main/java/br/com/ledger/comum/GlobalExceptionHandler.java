@@ -50,6 +50,21 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         return problema(HttpStatus.BAD_REQUEST, "Requisicao invalida", e.getMessage());
     }
 
+    /**
+     * Acesso negado a uma operação (ex.: mover conta que não é sua). HTTP 403.
+     * Mensagem genérica de propósito: não confirmamos detalhes do recurso alheio.
+     */
+    @ExceptionHandler(AcessoNegadoException.class)
+    public ProblemDetail tratarAcessoNegado(AcessoNegadoException e) {
+        return problema(HttpStatus.FORBIDDEN, "Acesso negado", "Acesso negado");
+    }
+
+    /** Negação vinda do Spring Security (ex.: @PreAuthorize). HTTP 403, genérico. */
+    @ExceptionHandler(org.springframework.security.access.AccessDeniedException.class)
+    public ProblemDetail tratarAccessDenied(org.springframework.security.access.AccessDeniedException e) {
+        return problema(HttpStatus.FORBIDDEN, "Acesso negado", "Acesso negado");
+    }
+
     /** Ex.: "/contas/abc" quando o esperado é um UUID. */
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)
     public ProblemDetail tratarTipoInvalido(MethodArgumentTypeMismatchException e) {

@@ -3,6 +3,7 @@ package br.com.ledger.saude;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.dao.DataAccessResourceFailureException;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -21,7 +22,12 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * controller, sem banco de dados. Por isso roda em segundos e não precisa de Docker.
  * O banco é substituído por um mock (dublê controlado pelo teste).
  */
+// addFilters = false: esta é uma fatia web focada no comportamento do endpoint
+// de saúde (UP/DOWN), não na segurança. Desligar os filtros do Spring Security
+// evita o 401 do contexto de teste fatiado; o controle de acesso real é coberto
+// pelos testes de integração dedicados (ControleDeAcessoIdorTest, etc.).
 @WebMvcTest(SaudeController.class)
+@AutoConfigureMockMvc(addFilters = false)
 class SaudeControllerTest {
 
     @Autowired

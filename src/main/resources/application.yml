@@ -35,6 +35,23 @@ spring:
         max-page-size: 100
 
 ledger:
+  seguranca:
+    # Usuários sintéticos de desenvolvimento, criados no startup (SeedUsuariosRunner).
+    # As senhas vêm das variáveis SEED_* do .env e NUNCA ficam no código/Git.
+    # Se vazio, o seed é ignorado e a aplicação sobe normalmente.
+    seed:
+      operador:
+        username: ${SEED_OPERADOR_USERNAME:}
+        senha: ${SEED_OPERADOR_SENHA:}
+      cliente:
+        username: ${SEED_CLIENTE_USERNAME:}
+        senha: ${SEED_CLIENTE_SENHA:}
+    # Defesa contra força bruta no login (bloqueio progressivo por usuário).
+    login:
+      max-tentativas: ${LOGIN_MAX_TENTATIVAS:5}
+      bloqueio-base-segundos: ${LOGIN_BLOQUEIO_BASE_SEGUNDOS:60}
+      bloqueio-maximo-segundos: ${LOGIN_BLOQUEIO_MAXIMO_SEGUNDOS:900}
+
   idempotencia:
     # Por quanto tempo uma chave reconhece repetições (formato Duration: 24h, 30m...).
     validade: ${IDEMPOTENCIA_VALIDADE:24h}
