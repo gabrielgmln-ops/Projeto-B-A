@@ -43,6 +43,13 @@ public class SeedUsuariosRunner implements CommandLineRunner {
     @Value("${ledger.seguranca.seed.cliente.senha:}")
     private String clienteSenha;
 
+    // Segundo cliente, opcional: permite demonstrar uma transferência entre dois
+    // titulares diferentes (ex.: pagador e loja no Pix Simulado).
+    @Value("${ledger.seguranca.seed.cliente2.username:}")
+    private String cliente2Username;
+    @Value("${ledger.seguranca.seed.cliente2.senha:}")
+    private String cliente2Senha;
+
     public SeedUsuariosRunner(UsuarioRepository usuarioRepository, PasswordEncoder passwordEncoder) {
         this.usuarioRepository = usuarioRepository;
         this.passwordEncoder = passwordEncoder;
@@ -53,6 +60,9 @@ public class SeedUsuariosRunner implements CommandLineRunner {
     public void run(String... args) {
         criarSeNaoExistir(operadorUsername, operadorSenha, Papel.OPERADOR);
         criarSeNaoExistir(clienteUsername, clienteSenha, Papel.CLIENTE);
+        if (StringUtils.hasText(cliente2Username)) { // opcional: sem aviso quando ausente
+            criarSeNaoExistir(cliente2Username, cliente2Senha, Papel.CLIENTE);
+        }
     }
 
     private void criarSeNaoExistir(String username, String senha, Papel papel) {

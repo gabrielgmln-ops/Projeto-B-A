@@ -46,6 +46,9 @@ ledger:
       cliente:
         username: ${SEED_CLIENTE_USERNAME:}
         senha: ${SEED_CLIENTE_SENHA:}
+      cliente2:   # opcional
+        username: ${SEED_CLIENTE2_USERNAME:}
+        senha: ${SEED_CLIENTE2_SENHA:}
     # Defesa contra força bruta no login (bloqueio progressivo por usuário).
     login:
       max-tentativas: ${LOGIN_MAX_TENTATIVAS:5}
