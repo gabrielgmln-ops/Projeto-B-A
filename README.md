@@ -105,7 +105,24 @@ Destaques da suíte:
 - `IdempotenciaIntegracaoTest`: repetição sequencial e **20 repetições simultâneas** com a mesma chave geram uma única transação.
 - `AuditoriaExtratoIntegracaoTest`: o banco recusa `UPDATE`/`DELETE` no histórico.
 
+## Segurança (Operação Cofre)
+
+A API foi auditada atacando a si mesma; cada falha encontrada virou um teste que a reproduz.
+Relatório completo com CVSS: [docs/RELATORIO-APPSEC.md](docs/RELATORIO-APPSEC.md). Verificação externa com ZAP, sqlmap e k6: [docs/VERIFICACAO-ZAP-SQLMAP-K6.md](docs/VERIFICACAO-ZAP-SQLMAP-K6.md).
+
+| Defesa | Como |
+|---|---|
+| Autenticação | Spring Security, HTTP Basic stateless, senhas em BCrypt, usuários iniciais por variáveis `SEED_*` (nunca no Git) |
+| Autorização | Papéis `CLIENTE` e `OPERADOR`; cada conta tem dono e o cliente só enxerga e movimenta as próprias (corrige um IDOR, CVSS 8.1) |
+| Força bruta | Bloqueio progressivo de login: o tempo de bloqueio dobra a cada falha excedente (CVSS 7.5, corrigido) |
+| Injeção de SQL | Consultas parametrizadas, verificadas por teste e por sqlmap |
+| Vazamento de erro | 401/403 no mesmo formato Problem Details, sem stack trace nem SQL |
+
+Testes de segurança: `ControleDeAcessoIdorTest`, `ForcaBrutaLoginTest`, `InjecaoSqlTest`, entre outros.
+
 ## Endpoints
+
+Todas as rotas abaixo exigem autenticação (HTTP Basic); o cliente só acessa as próprias contas.
 
 | Método | Rota | Descrição |
 |---|---|---|
@@ -120,7 +137,7 @@ Destaques da suíte:
 Exemplo:
 
 ```bash
-curl.exe -X POST http://localhost:8081/api/v1/contas -H "Content-Type: application/json" -d "{\"titular\":\"Cliente Sintetico\"}"
+curl.exe -u <usuario>:<senha> -X POST http://localhost:8081/api/v1/contas -H "Content-Type: application/json" -d "{\"titular\":\"Cliente Sintetico\"}"
 ```
 
 ## Deploy (Render, plano gratuito)
@@ -133,7 +150,7 @@ Instância publicada: https://ledger-api-sk0d.onrender.com. O banco do plano gra
 
 ## Limitações conhecidas
 
-- Sem autenticação: qualquer pessoa com a URL consulta qualquer conta (fora do escopo da v1).
+- Autenticação por HTTP Basic: simples e stateless, mas sem expiração de credencial. Para clientes externos, o acesso por OAuth2/JWT fica no [Gateway de Segurança](https://github.com/gabrielgmln-ops/Gateway-de-Seguran-a), que fica na frente desta API.
 - Moeda única (BRL), sem juros nem tarifas.
 - O saldo é um `SUM` sobre todos os lançamentos da conta; com milhões de lançamentos por conta seria preciso um snapshot periódico de saldo.
 - Chaves de idempotência valem 24h (`IDEMPOTENCIA_VALIDADE`); depois disso, a mesma chave é aceita como pedido novo.
@@ -142,7 +159,8 @@ Instância publicada: https://ledger-api-sk0d.onrender.com. O banco do plano gra
 
 ## Próximos passos
 
-- Autenticação (OAuth2/JWT) e autorização por titular.
+- Validar JWT emitido pelo Gateway diretamente na Ledger (resource server), em vez de HTTP Basic.
+- DAST (ZAP baseline) automatizado no CI.
 - Estorno como nova transação compensatória.
 - Snapshots de saldo e particionamento da tabela de lançamentos.
 - Outbox pattern para publicar eventos (Kafka) de forma confiável.
