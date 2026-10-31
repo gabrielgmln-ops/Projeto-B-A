@@ -150,7 +150,7 @@ Instância publicada: https://ledger-api-sk0d.onrender.com. O banco do plano gra
 
 ## Limitações conhecidas
 
-- Autenticação por HTTP Basic: simples e stateless, mas sem expiração de credencial. Para clientes externos, o acesso por OAuth2/JWT fica no [Gateway de Segurança](https://github.com/gabrielgmln-ops/Gateway-de-Seguran-a), que fica na frente desta API.
+- Autenticação por HTTP Basic: simples e stateless, mas sem expiração de credencial. Para clientes externos, o acesso por OAuth2/JWT fica no [Gateway de Segurança](https://github.com/gabrielgmln-ops/gateway-seguranca), que fica na frente desta API.
 - Moeda única (BRL), sem juros nem tarifas.
 - O saldo é um `SUM` sobre todos os lançamentos da conta; com milhões de lançamentos por conta seria preciso um snapshot periódico de saldo.
 - Chaves de idempotência valem 24h (`IDEMPOTENCIA_VALIDADE`); depois disso, a mesma chave é aceita como pedido novo.
